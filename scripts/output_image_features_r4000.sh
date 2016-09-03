@@ -5,12 +5,15 @@
 
 sDir=~/Documents/Research/Projects/Schatz/Data/g21chaotic/r4000_2016_02_04_superfast/g21flow
 
+startidx=$1
+endidx=$2
+
 rollWidth=26
 
 N=($(ls -1f $sDir/BMPs_sublevel | grep .bmp | wc -l))
 
-startidx=20
-endidx=$N
+# startidx=20
+# endidx=$N
 
 crop_x=210
 crop_y=210
@@ -36,6 +39,12 @@ do
   #     -m $(printf 'pattern_data/%05d_matches.csv' $i) \
   #     -r $rollWidth \
   #     > $sDir/$(printf 'pattern_data/%05d_clusters.csv' $i)
+
+  python ../python/get-orientation-field.py \
+      -d $sDir \
+      -i $(printf 'BMPs_sublevel/%05d.bmp' $i) \
+      -b 5 \
+      > $sDir/$(printf 'pattern_data/%05d_orientation_field.csv' $i)
 
   python ../python/get-gradient-based-features.py \
       -d $sDir \
