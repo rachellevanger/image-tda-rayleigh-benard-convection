@@ -50,9 +50,11 @@ for i in range(index + 1, index + steps + 1):
     result_not_index = sorted(result_not_index)
 
     # Update matched
-    data.loc[result_index, 'finalmatch'] = result['isMatched_y']
+    if (i < (index + steps)):
+        data.loc[result_index, 'finalmatch'] = result['isMatched_y']
     data.loc[result_index, 'birth_%d' % (i - index)] = result['birth_y']
     data.loc[result_index, 'death_%d' % (i - index)] = result['death_y']
+
     # Update unmatched to -1
     data.loc[result_not_index, 'finalmatch'] = -1
 
@@ -62,7 +64,7 @@ matched_indices = (data['finalmatch'] != -1)
 
 # For any transitively-matched points (finalmatch != -1), compute the largest deviation 
 # from the planar linear interpolation based on the two terminal matched points.
-for i in range(1, steps+1):
+for i in range(1, steps + 1):
 
     # Parameterize line between starting and terminal point in number of steps
     L = pd.DataFrame(columns=['birth', 'death'])

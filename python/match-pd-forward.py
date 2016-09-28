@@ -57,16 +57,21 @@ sup1 = pd.read_csv(options.dir + "/" + options.sup1)
 sub2 = pd.read_csv(options.dir + "/" + options.sub2)
 sup2 = pd.read_csv(options.dir + "/" + options.sup2)
 
-# Add a column of -1 for isMatched
-sub1['isMatched'] = -1
-sup1['isMatched'] = -1
-sub2['isMatched'] = -1
-sup2['isMatched'] = -1
+# Add a column of -1 for matchedidx
+sub1['matchedidx'] = -1
+sup1['matchedidx'] = -1
+sub2['matchedidx'] = -1
+sup2['matchedidx'] = -1
 # Add a column of 0 for radius
 sub1['radius'] = 0
 sup1['radius'] = 0
 sub2['radius'] = 0
 sup2['radius'] = 0
+# Add zeros for matched birth/death values
+sub1['matchedbirth'] = 0
+sup1['matcheddeath'] = 0
+sub2['matchedbirth'] = 0
+sup2['matcheddeath'] = 0
 
 # Convert data frames to numeric
 # sub1 = sub1.convert_objects(convert_numeric=True)
@@ -80,10 +85,10 @@ sup2 = sup2.apply(pd.to_numeric, args=('coerce',))
 
 
 # MATCH INFINITY POINTS
-sub1.loc[0,'isMatched'] = 0
-sup1.loc[0,'isMatched'] = 0
-sub2.loc[0,'isMatched'] = 1
-sup2.loc[0,'isMatched'] = 1
+sub1.loc[0,'matchedidx'] = 0
+sup1.loc[0,'matchedidx'] = 0
+sub2.loc[0,'matchedidx'] = 1
+sup2.loc[0,'matchedidx'] = 1
 
 print("...data loaded.")
 
@@ -92,8 +97,8 @@ print("...data loaded.")
 # For each point in sub1, sup1, look for points in corresponding dimensions in sub2, sup2 
 # that are within the max_error. If only one match, this is a matched point by stability.
 def bottleneckMatches(pt, data):
-  result = data.loc[ 
-                   (data['isMatched'] == -1) & \
+  result = data.loc[ \
+                   (data['matchedidx'] == -1) & \
                    (data['dim']==pt['dim']) & \
                    (abs(data['birth']-pt['birth']) <= max_error) & \
                    (abs(data['death']-pt['death']) <= max_error) 
@@ -104,27 +109,31 @@ def bottleneckMatches(pt, data):
     return -1
 
 def findBottleneckMatches(radius):
-  for i in sub1.loc[(sub1['isMatched']==-1)].index:
-    if sub1.loc[i,'isMatched'] == -1:
-      match = bottleneckMatches(sub1.iloc[i], sub2.loc[(sub2['isMatched']==-1)])
+  for i in sub1.loc[(sub1['matchedidx']==-1) & (abs(sub1['birth'] - sub1['death']) > 2*max_error)].index:
+    if sub1.loc[i,'matchedidx'] == -1:
+      match = bottleneckMatches(sub1.iloc[i], sub2.loc[(sub2['matchedidx']==-1)])
       if match > -1:
-        sub1.loc[i,'isMatched'] = match
+        sub1.loc[i,'matchedidx'] = match
         sub1.loc[i,'radius'] = radius
-        sub2.loc[match,'isMatched'] = 1
+        sub1.loc[i,'matchedbirth'] = sub2.loc[match,'birth']
+        sub1.loc[i,'matcheddeath'] = sub2.loc[match,'death']
+        sub2.loc[match,'matchedidx'] = 1
 
-  for i in sup1.loc[(sup1['isMatched']==-1)].index:
-    if sup1.loc[i,'isMatched'] == -1:
-      match = bottleneckMatches(sup1.iloc[i], sup2.loc[(sup2['isMatched']==-1)])
+  for i in sup1.loc[(sup1['matchedidx']==-1) & (abs(sup1['birth'] - sup1['death']) > 2*max_error)].index:
+    if sup1.loc[i,'matchedidx'] == -1:
+      match = bottleneckMatches(sup1.iloc[i], sup2.loc[(sup2['matchedidx']==-1)])
       if match > -1:
-        sup1.loc[i,'isMatched'] = match
+        sup1.loc[i,'matchedidx'] = match
         sup1.loc[i,'radius'] = radius
-        sup2.loc[match,'isMatched'] = 1
+        sup1.loc[i,'matchedbirth'] = sup2.loc[match,'birth']
+        sub1.loc[i,'matcheddeath'] = sup2.loc[match,'death']
+        sup2.loc[match,'matchedidx'] = 1
 
 # STABLE GENERATOR MATCHES
 # Match the stable generators to within +-2 pixels
 def stableGeneratorMatches(pt, data, radius):
   result = data.loc[ 
-                   (data['isMatched'] == -1) & \
+                   (data['matchedidx'] == -1) & \
                    (data['dim']==pt['dim']) & \
                    (abs(data['b_x']-pt['b_x']) <= radius) & \
                    (abs(data['b_y']-pt['b_y']) <= radius)  & \
@@ -140,21 +149,25 @@ def stableGeneratorMatches(pt, data, radius):
     return -1
 
 def findStableGeneratorMatches(radius):
-  for i in sub1.loc[(sub1['isMatched']==-1)].index:
-    if sub1.loc[i,'isMatched'] == -1:
-      match = stableGeneratorMatches(sub1.iloc[i], sub2.loc[(sub2['isMatched']==-1)], radius)
+  for i in sub1.loc[(sub1['matchedidx']==-1)].index:
+    if sub1.loc[i,'matchedidx'] == -1:
+      match = stableGeneratorMatches(sub1.iloc[i], sub2.loc[(sub2['matchedidx']==-1)], radius)
       if match > -1:
-        sub1.loc[i,'isMatched'] = match
+        sub1.loc[i,'matchedidx'] = match
         sub1.loc[i,'radius'] = radius
-        sub2.loc[match,'isMatched'] = 1
+        sub1.loc[i,'matchedbirth'] = sub2.loc[match,'birth']
+        sub1.loc[i,'matcheddeath'] = sub2.loc[match,'death']
+        sub2.loc[match,'matchedidx'] = 1
 
-  for i in sup1.loc[(sup1['isMatched']==-1)].index:
-    if sup1.loc[i,'isMatched'] == -1:
-      match = stableGeneratorMatches(sup1.iloc[i], sup2.loc[(sup2['isMatched']==-1)], radius)
+  for i in sup1.loc[(sup1['matchedidx']==-1)].index:
+    if sup1.loc[i,'matchedidx'] == -1:
+      match = stableGeneratorMatches(sup1.iloc[i], sup2.loc[(sup2['matchedidx']==-1)], radius)
       if match > -1:
-        sup1.loc[i,'isMatched'] = match
+        sup1.loc[i,'matchedidx'] = match
         sup1.loc[i,'radius'] = radius
-        sup2.loc[match,'isMatched'] = 1
+        sup1.loc[i,'matchedbirth'] = sup2.loc[match,'birth']
+        sup1.loc[i,'matcheddeath'] = sup2.loc[match,'death']
+        sup2.loc[match,'matchedidx'] = 1
 
 # PINCH-OFF GENERATOR MATCHES
 # Match the pinch-off to within +-2 pixels
@@ -163,7 +176,7 @@ def stablePinchOffMatches(pt, data, type, radius):
   if type == 'sub':
     if pt['dim'] == 0:
       result = data.loc[ 
-                       (data['isMatched'] == -1) & \
+                       (data['matchedidx'] == -1) & \
                        (data['dim']==pt['dim']) & \
                        (abs(data['d_x']-pt['d_x']) <= radius) & \
                        (abs(data['d_y']-pt['d_y']) <= radius) & \
@@ -172,7 +185,7 @@ def stablePinchOffMatches(pt, data, type, radius):
                        ]
     else:
       result = data.loc[ 
-                       (data['isMatched'] == -1) & \
+                       (data['matchedidx'] == -1) & \
                        (data['dim']==pt['dim']) & \
                        (abs(data['b_x']-pt['b_x']) <= radius) & \
                        (abs(data['b_y']-pt['b_y']) <= radius) & \
@@ -183,7 +196,7 @@ def stablePinchOffMatches(pt, data, type, radius):
   else:
     if pt['dim'] == 0:
       result = data.loc[ 
-                       (data['isMatched'] == -1) & \
+                       (data['matchedidx'] == -1) & \
                        (data['dim']==pt['dim']) & \
                        (abs(data['d_x']-pt['d_x']) <= radius) & \
                        (abs(data['d_y']-pt['d_y']) <= radius) & \
@@ -192,7 +205,7 @@ def stablePinchOffMatches(pt, data, type, radius):
                        ]
     else:
       result = data.loc[ 
-                       (data['isMatched'] == -1) & \
+                       (data['matchedidx'] == -1) & \
                        (data['dim']==pt['dim']) & \
                        (abs(data['b_x']-pt['b_x']) <= radius) & \
                        (abs(data['b_y']-pt['b_y']) <= radius) & \
@@ -206,37 +219,45 @@ def stablePinchOffMatches(pt, data, type, radius):
     return -1
 
 def findStablePinchOffMatches(radius):
-  for i in sub1.loc[(sub1['isMatched']==-1)].index:
-    if (sub1.loc[i,'isMatched'] == -1) & (sub1.loc[i,'dim'] == 0) & (sub1.loc[i,'death'] < 170):
-      match = stablePinchOffMatches(sub1.iloc[i], sub2.loc[(sub2['isMatched']==-1)], 'sub', radius)
+  for i in sub1.loc[(sub1['matchedidx']==-1) & (abs(sub1['birth'] - sub1['death']) > 2*max_error)].index:
+    if (sub1.loc[i,'matchedidx'] == -1) & (sub1.loc[i,'dim'] == 0) & (sub1.loc[i,'death'] < 170):
+      match = stablePinchOffMatches(sub1.iloc[i], sub2.loc[(sub2['matchedidx']==-1)], 'sub', radius)
       if match > -1:
-        sub1.loc[i,'isMatched'] = match
+        sub1.loc[i,'matchedidx'] = match
         sub1.loc[i,'radius'] = radius
-        sub2.loc[match,'isMatched'] = 1
+        sub1.loc[i,'matchedbirth'] = sub2.loc[match,'birth']
+        sub1.loc[i,'matcheddeath'] = sub2.loc[match,'death']
+        sub2.loc[match,'matchedidx'] = 1
 
-  for i in sup1.loc[(sup1['isMatched']==-1)].index:
-    if (sup1.loc[i,'isMatched'] == -1) & (sup1.loc[i,'dim'] == 1) & (sup1.loc[i,'death'] < 170):
-      match = stablePinchOffMatches(sup1.iloc[i], sup2.loc[(sup2['isMatched']==-1)], 'sup', radius)
+  for i in sup1.loc[(sup1['matchedidx']==-1) & (abs(sup1['birth'] - sup1['death']) > 2*max_error)].index:
+    if (sup1.loc[i,'matchedidx'] == -1) & (sup1.loc[i,'dim'] == 1) & (sup1.loc[i,'death'] < 170):
+      match = stablePinchOffMatches(sup1.iloc[i], sup2.loc[(sup2['matchedidx']==-1)], 'sup', radius)
       if match > -1:
-        sup1.loc[i,'isMatched'] = match
+        sup1.loc[i,'matchedidx'] = match
         sup1.loc[i,'radius'] = radius
-        sup2.loc[match,'isMatched'] = 1
+        sup1.loc[i,'matchedbirth'] = sup2.loc[match,'birth']
+        sup1.loc[i,'matcheddeath'] = sup2.loc[match,'death']
+        sup2.loc[match,'matchedidx'] = 1
 
-  for i in sub1.loc[(sub1['isMatched']==-1)].index:
-    if (sub1.loc[i,'isMatched'] == -1) & (sub1.loc[i,'dim'] == 1) & (sub1.loc[i,'death'] >= 170):
-      match = stablePinchOffMatches(sub1.iloc[i], sub2.loc[(sub2['isMatched']==-1)], 'sub', radius)
+  for i in sub1.loc[(sub1['matchedidx']==-1) & (abs(sub1['birth'] - sub1['death']) > 2*max_error)].index:
+    if (sub1.loc[i,'matchedidx'] == -1) & (sub1.loc[i,'dim'] == 1) & (sub1.loc[i,'death'] >= 170):
+      match = stablePinchOffMatches(sub1.iloc[i], sub2.loc[(sub2['matchedidx']==-1)], 'sub', radius)
       if match > -1:
-        sub1.loc[i,'isMatched'] = match
+        sub1.loc[i,'matchedidx'] = match
         sub1.loc[i,'radius'] = radius
-        sub2.loc[match,'isMatched'] = 1
+        sub1.loc[i,'matchedbirth'] = sub2.loc[match,'birth']
+        sub1.loc[i,'matcheddeath'] = sub2.loc[match,'death']
+        sub2.loc[match,'matchedidx'] = 1
 
-  for i in sup1.loc[(sup1['isMatched']==-1)].index:
-    if (sup1.loc[i,'isMatched'] == -1) & (sup1.loc[i,'dim'] == 0) & (sup1.loc[i,'death'] >= 170):
-      match = stablePinchOffMatches(sup1.iloc[i], sup2.loc[(sup2['isMatched']==-1)], 'sup', radius)
+  for i in sup1.loc[(sup1['matchedidx']==-1) & (abs(sup1['birth'] - sup1['death']) > 2*max_error)].index:
+    if (sup1.loc[i,'matchedidx'] == -1) & (sup1.loc[i,'dim'] == 0) & (sup1.loc[i,'death'] >= 170):
+      match = stablePinchOffMatches(sup1.iloc[i], sup2.loc[(sup2['matchedidx']==-1)], 'sup', radius)
       if match > -1:
-        sup1.loc[i,'isMatched'] = match
+        sup1.loc[i,'matchedidx'] = match
         sup1.loc[i,'radius'] = radius
-        sup2.loc[match,'isMatched'] = 1
+        sup1.loc[i,'matchedbirth'] = sup2.loc[match,'birth']
+        sup1.loc[i,'matcheddeath'] = sup2.loc[match,'death']
+        sup2.loc[match,'matchedidx'] = 1
 
 
 
@@ -245,7 +266,7 @@ def findStablePinchOffMatches(radius):
 def stableRollMatches(pt, data, type, radius):
   if type == 'sub':
     result = data.loc[ 
-                     (data['isMatched'] == -1) & \
+                     (data['matchedidx'] == -1) & \
                      (data['dim']==pt['dim']) & \
                      (abs(data['b_x']-pt['b_x']) <= radius) & \
                      (abs(data['b_y']-pt['b_y']) <= radius) & \
@@ -254,7 +275,7 @@ def stableRollMatches(pt, data, type, radius):
                      ]
   else:
     result = data.loc[ 
-                     (data['isMatched'] == -1) & \
+                     (data['matchedidx'] == -1) & \
                      (data['dim']==pt['dim']) & \
                      (abs(data['d_x']-pt['d_x']) <= radius) & \
                      (abs(data['d_y']-pt['d_y']) <= radius) & \
@@ -268,63 +289,66 @@ def stableRollMatches(pt, data, type, radius):
     return -1
 
 def findStableRollMatches(radius):
-  for i in sub1.loc[(sub1['isMatched']==-1)].index:
-    if (sub1.loc[i,'isMatched'] == -1) & (sub1.loc[i,'dim'] == 0) & (sub1.loc[i,'death'] >= 170):
-      match = stableRollMatches(sub1.iloc[i], sub2.loc[(sub2['isMatched']==-1)], 'sub', radius)
+  for i in sub1.loc[(sub1['matchedidx']==-1)].index:
+    if (sub1.loc[i,'matchedidx'] == -1) & (sub1.loc[i,'dim'] == 0) & (sub1.loc[i,'death'] >= 170):
+      match = stableRollMatches(sub1.iloc[i], sub2.loc[(sub2['matchedidx']==-1)], 'sub', radius)
       if match > -1:
-        sub1.loc[i,'isMatched'] = match
+        sub1.loc[i,'matchedidx'] = match
         sub1.loc[i,'radius'] = radius
-        sub2.loc[match,'isMatched'] = 1
+        sub1.loc[i,'matchedbirth'] = sub2.loc[match,'birth']
+        sub1.loc[i,'matcheddeath'] = sub2.loc[match,'death']
+        sub2.loc[match,'matchedidx'] = 1
 
-  for i in sup1.loc[(sup1['isMatched']==-1)].index:
-    if (sup1.loc[i,'isMatched'] == -1) & (sup1.loc[i,'dim'] == 0) & (sup1.loc[i,'death'] < 170):
-      match = stableRollMatches(sup1.iloc[i], sup2.loc[(sup2['isMatched']==-1)], 'sup', radius)
+  for i in sup1.loc[(sup1['matchedidx']==-1)].index:
+    if (sup1.loc[i,'matchedidx'] == -1) & (sup1.loc[i,'dim'] == 0) & (sup1.loc[i,'death'] < 170):
+      match = stableRollMatches(sup1.iloc[i], sup2.loc[(sup2['matchedidx']==-1)], 'sup', radius)
       if match > -1:
-        sup1.loc[i,'isMatched'] = match
+        sup1.loc[i,'matchedidx'] = match
         sup1.loc[i,'radius'] = radius
-        sup2.loc[match,'isMatched'] = 1
+        sup1.loc[i,'matchedbirth'] = sup2.loc[match,'birth']
+        sup1.loc[i,'matcheddeath'] = sup2.loc[match,'death']
+        sup2.loc[match,'matchedidx'] = 1
 
 
 print("Starting matching...")
 
 # MATCHING PROCEDURE
 def getMatches(radius):
-  print("\nBatch %d...(%d,%d)" % (radius, len(sub1.loc[(sub1['isMatched']==-1)]),  len(sup1.loc[(sup1['isMatched']==-1)])))
+  print("\nRadius %d...(%d,%d)" % (radius, len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findStableGeneratorMatches(radius) # Find the stable generator matches
-  print("Stable Generators..." + "(%d,%d)" % (len(sub1.loc[(sub1['isMatched']==-1)]),  len(sup1.loc[(sup1['isMatched']==-1)])))
+  print("Stable Generators..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findBottleneckMatches(radius) # Run bottleneck match first
-  print("Bottleneck..." + "(%d,%d)" % (len(sub1.loc[(sub1['isMatched']==-1)]),  len(sup1.loc[(sup1['isMatched']==-1)])))
+  print("Bottleneck..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findStablePinchOffMatches(radius) # Find the stable pinch-off matches
-  print("Pinch Offs..." + "(%d,%d)" % (len(sub1.loc[(sub1['isMatched']==-1)]),  len(sup1.loc[(sup1['isMatched']==-1)])))
+  print("Pinch Offs..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findStableRollMatches(radius) # Find the stable roll matches
-  print("Rolls..." + "(%d,%d)" % (len(sub1.loc[(sub1['isMatched']==-1)]),  len(sup1.loc[(sup1['isMatched']==-1)])))
+  print("Rolls..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
 
-tmpSub = len(sub1.loc[(sub1['isMatched']==-1)])
-tmpSup = len(sup1.loc[(sup1['isMatched']==-1)])
+tmpSub = len(sub1.loc[(sub1['matchedidx']==-1)])
+tmpSup = len(sup1.loc[(sup1['matchedidx']==-1)])
 getMatches(1)
 
 factor=5
 radius=0
-while ( (len(sub1.loc[(sub1['isMatched']==-1)]) < tmpSub) | (tmpSup > len(sup1.loc[(sup1['isMatched']==-1)])) ):
-  tmpSub = len(sub1.loc[(sub1['isMatched']==-1)])
-  tmpSup = len(sup1.loc[(sup1['isMatched']==-1)])
+while ( (len(sub1.loc[(sub1['matchedidx']==-1)]) < tmpSub) | (tmpSup > len(sup1.loc[(sup1['matchedidx']==-1)])) ):
+  tmpSub = len(sub1.loc[(sub1['matchedidx']==-1)])
+  tmpSup = len(sup1.loc[(sup1['matchedidx']==-1)])
   radius = radius + factor
   getMatches(radius)
-  if radius == 4*factor:
+  if radius == 5*factor:
     break
 
 print("...matching done!\n\n")
 
 
-
-# sub_match = sub1.loc[(sub1['isMatched']==-1) & (sub1['death'] - sub1['birth'] > 2*max_error)]
-# sup_match = sup1.loc[(sup1['isMatched']==-1) & (sup1['birth'] - sup1['death'] > 2*max_error)]
+# sub_match = sub1.loc[(sub1['matchedidx']==-1) & (sub1['death'] - sub1['birth'] > 2*max_error)]
+# sup_match = sup1.loc[(sup1['matchedidx']==-1) & (sup1['birth'] - sup1['death'] > 2*max_error)]
 
 # sub_match.to_csv(options.dir + "/" + options.osub)
 # sup_match.to_csv(options.dir + "/" + options.osup)
 
-sub1.to_csv(options.dir + "/" + options.osub)
-sup1.to_csv(options.dir + "/" + options.osup)
+sub1.to_csv(options.dir + "/" + options.osub, index_label="idx")
+sup1.to_csv(options.dir + "/" + options.osup, index_label="idx")
 
 
 
