@@ -33,6 +33,7 @@ parser.add_option("--osup", dest="osup",
 
 (options, args) = parser.parse_args()
 
+
 print("########## Matching %s ###########" % options.img1)
 
 # Load the bitmap images.
@@ -57,38 +58,21 @@ sup1 = pd.read_csv(options.dir + "/" + options.sup1)
 sub2 = pd.read_csv(options.dir + "/" + options.sub2)
 sup2 = pd.read_csv(options.dir + "/" + options.sup2)
 
-# Add a column of -1 for matchedidx
-sub1['matchedidx'] = -1
-sup1['matchedidx'] = -1
-sub2['matchedidx'] = -1
-sup2['matchedidx'] = -1
-# Add a column of 0 for radius
-sub1['radius'] = 0
-sup1['radius'] = 0
-sub2['radius'] = 0
-sup2['radius'] = 0
-# Add zeros for matched birth/death values
-sub1['matchedbirth'] = 0
-sup1['matcheddeath'] = 0
-sub2['matchedbirth'] = 0
-sup2['matcheddeath'] = 0
 
-# Convert data frames to numeric
-# sub1 = sub1.convert_objects(convert_numeric=True)
-# sup1 = sup1.convert_objects(convert_numeric=True)
-# sub2 = sub2.convert_objects(convert_numeric=True)
-# sup2 = sup2.convert_objects(convert_numeric=True)
-sub1 = sub1.apply(pd.to_numeric, args=('coerce',))
-sub2 = sub2.apply(pd.to_numeric, args=('coerce',))
-sup1 = sup1.apply(pd.to_numeric, args=('coerce',))
-sup2 = sup2.apply(pd.to_numeric, args=('coerce',))
+for df in [sub1, sup1, sub2, sup2]: 
+  # Add a column of -1 for matchedidx
+  df['matchedidx'] = -1
+  # Add a column of 0 for radius
+  df['radius'] = 0
+  # Add zeros for matched birth/death values
+  df['matchedbirth'] = 0
+  df['matcheddeath'] = 0
+  # Convert data frames to numeric
+  # df = df.convert_objects(convert_numeric=True)
+  df = df.apply(pd.to_numeric, args=('coerce',))
+  # MATCH INFINITY POINTS
+  df.loc[0,'matchedidx'] = 0
 
-
-# MATCH INFINITY POINTS
-sub1.loc[0,'matchedidx'] = 0
-sup1.loc[0,'matchedidx'] = 0
-sub2.loc[0,'matchedidx'] = 1
-sup2.loc[0,'matchedidx'] = 1
 
 print("...data loaded.")
 
@@ -261,7 +245,7 @@ def findStablePinchOffMatches(radius):
 
 
 
-# STBLE ROLL MATCHES
+# STABLE ROLL MATCHES
 # Match birth generators of death abve the pinch-off level to within +-2 pixels
 def stableRollMatches(pt, data, type, radius):
   if type == 'sub':
@@ -341,11 +325,6 @@ while ( (len(sub1.loc[(sub1['matchedidx']==-1)]) < tmpSub) | (tmpSup > len(sup1.
 print("...matching done!\n\n")
 
 
-# sub_match = sub1.loc[(sub1['matchedidx']==-1) & (sub1['death'] - sub1['birth'] > 2*max_error)]
-# sup_match = sup1.loc[(sup1['matchedidx']==-1) & (sup1['birth'] - sup1['death'] > 2*max_error)]
-
-# sub_match.to_csv(options.dir + "/" + options.osub)
-# sup_match.to_csv(options.dir + "/" + options.osup)
 
 sub1.to_csv(options.dir + "/" + options.osub, index_label="idx")
 sup1.to_csv(options.dir + "/" + options.osup, index_label="idx")
