@@ -48,7 +48,7 @@ bmp2 = np.array(im2).astype(int)
 # Compute the sup norm between the two images to use as stability criteria
 max_error = np.absolute(np.subtract(bmp1, bmp2)).max()
 
-print("Bottleneck error: " + str(max_error))
+print("Sup norm: " + str(max_error))
 
 print("Loading data...")
 
