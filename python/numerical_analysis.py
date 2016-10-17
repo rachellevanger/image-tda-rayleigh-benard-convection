@@ -1,9 +1,16 @@
-def Plot(list_of_things_to_plot):
+
+import scipy
+import scipy.signal
+import scipy.ndimage
+import numpy as np
+import math
+
+def plot(list_of_things_to_plot):
     plt.rcParams['figure.figsize'] = (20.0, 10.0)
     for i,x in enumerate(list_of_things_to_plot):
         plt.subplot(1,len(list_of_things_to_plot),i+1,aspect='equal'); plt.pcolor(x); plt.colorbar()
         
-class Timer(object):
+class timer(object):
     def __init__(self, name=None):
         self.name = name
     def __enter__(self):
@@ -29,7 +36,7 @@ def fourier_diff(u, order=1):
     uy = np.real(np.fft.ifft2(uy_fft))
     return [ux, uy]
 
-def OrientationField(du, radius=5):
+def orientation_field(du, radius=5):
     """
     Computes orientation field (result everywhere between -pi/2 and pi/2)
     given vector field
@@ -39,14 +46,14 @@ def OrientationField(du, radius=5):
     X = scipy.ndimage.filters.gaussian_filter(ux**2.0 - uy**2.0, sigma=radius)
     return .5 * np.arctan2(Y, X)
 
-def SingularPoints(DF):
+def singular_points(DF):
     JX = np.diff(DF, axis=0)
     JY = np.diff(DF, axis=1)
     JX += math.pi * (JX < -math.pi/2.0 ) - math.pi * (JX > math.pi/2.0)
     JY += math.pi * (JY < -math.pi/2.0 ) - math.pi * (JY > math.pi/2.0)
     return np.rint((np.diff(JY, axis=0) - np.diff(JX, axis=1))/math.pi)
 
-def EMB_Wavenumber(u, method="difference"):
+def emb_wavenumber(u, method="difference"):
     u = scipy.ndimage.filters.gaussian_filter(u, sigma=2)
     u = u - np.sum(u)/np.size(u)
     u = u / np.max(np.absolute(u))
@@ -83,4 +90,4 @@ def EMB_Wavenumber(u, method="difference"):
     Sign = 1.0 - 2.0 * (kx < 0)
     kx = kx * Sign
     ky = ky * Sign
-    return [kx, ky]
+    return np.sqrt(kx**2.0 + ky**2.0)

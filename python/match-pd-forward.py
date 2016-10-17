@@ -116,6 +116,7 @@ def findBottleneckMatches(radius):
 # STABLE GENERATOR MATCHES
 # Match the stable generators to within +-2 pixels
 def stableGeneratorMatches(pt, data, radius):
+
   result = data.loc[ 
                    (data['matchedidx'] == -1) & \
                    (data['dim']==pt['dim']) & \
