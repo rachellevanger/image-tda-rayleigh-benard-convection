@@ -309,23 +309,26 @@ def getMatches(radius):
   findStableRollMatches(radius) # Find the stable roll matches
   print("Rolls..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
 
+
 tmpSub = len(sub1.loc[(sub1['matchedidx']==-1)])
 tmpSup = len(sup1.loc[(sup1['matchedidx']==-1)])
 getMatches(1)
 
 factor=5
 radius=0
+iterations=2
 while ( (len(sub1.loc[(sub1['matchedidx']==-1)]) < tmpSub) | (tmpSup > len(sup1.loc[(sup1['matchedidx']==-1)])) ):
   tmpSub = len(sub1.loc[(sub1['matchedidx']==-1)])
   tmpSup = len(sup1.loc[(sup1['matchedidx']==-1)])
   radius = radius + factor
   getMatches(radius)
-  if radius == 5*factor:
+  if radius == (iterations-1)*factor:
     break
 
 print("...matching done!\n\n")
 
-
+sub1 = sub1[np.isfinite(sub1['dim'])]
+sup1 = sup1[np.isfinite(sup1['dim'])]
 
 sub1.to_csv(options.dir + "/" + options.osub, index_label="idx")
 sup1.to_csv(options.dir + "/" + options.osup, index_label="idx")
