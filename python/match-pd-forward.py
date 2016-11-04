@@ -110,7 +110,7 @@ def findBottleneckMatches(radius):
         sup1.loc[i,'matchedidx'] = match
         sup1.loc[i,'radius'] = radius
         sup1.loc[i,'matchedbirth'] = sup2.loc[match,'birth']
-        sub1.loc[i,'matcheddeath'] = sup2.loc[match,'death']
+        sup1.loc[i,'matcheddeath'] = sup2.loc[match,'death']
         sup2.loc[match,'matchedidx'] = 1
 
 # STABLE GENERATOR MATCHES
@@ -302,8 +302,8 @@ def getMatches(radius):
   print("\nRadius %d...(%d,%d)" % (radius, len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findStableGeneratorMatches(radius) # Find the stable generator matches
   print("Stable Generators..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
-  findBottleneckMatches(radius) # Run bottleneck match first
-  print("Bottleneck..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
+  # findBottleneckMatches(radius) # Run bottleneck match first
+  # print("Bottleneck..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findStablePinchOffMatches(radius) # Find the stable pinch-off matches
   print("Pinch Offs..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findStableRollMatches(radius) # Find the stable roll matches
