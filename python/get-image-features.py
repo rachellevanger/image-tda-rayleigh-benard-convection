@@ -94,7 +94,7 @@ for idx, match in plumeOtherMatches.iterrows():
   print "plume_other,%s,%s" % (match['d_x'], match['d_y'])
   if ((match['birth'] >= med*LOWERFACTOR) & (match['birth'] < med)):
     print "pinch_lower,%s,%s" % (match['b_x'], match['b_y'])
-  if ((match['birth'] >= med) & (match['birth'] <= med*UPPERFACTOR)):
+  if ((match['birth'] > med) & (match['birth'] <= med*UPPERFACTOR)):
     print "pinch_upper,%s,%s" % (match['b_x'], match['b_y'])
 
 for idx, match in ringUpperMatches.iterrows():

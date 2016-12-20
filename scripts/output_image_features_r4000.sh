@@ -3,12 +3,12 @@
 
 
 
-sDir=~/Documents/Research/Projects/Schatz/Data/g21chaotic/r4000_2015_09_16_fast/g21flow
+sDir=~/Documents/Research/Projects/Schatz/Data/g21chaotic/r4000_2016_11_01_superfast/g21flow
 
 startidx=$1
 endidx=$2
 
-rollWidth=26
+rollWidth=20
 
 # N=($(ls -1f $sDir/BMPs_sublevel | grep .bmp | wc -l))
 
@@ -26,11 +26,11 @@ do
 
   python ../python/get-image-features.py \
       -d $sDir \
-      -p $(printf 'image_properties/%05d.yaml' $i) \
-      --subpers $(printf 'pd_sublevel/%05d__sub_all.csv' $i) \
-      --suppers $(printf 'pd_superlevel/%05d__super_all.csv' $i) \
+      -p $(printf 'image_properties/%06d.yaml' $i) \
+      --subpers $(printf 'pd_sub/%06d.csv' $i) \
+      --suppers $(printf 'pd_sup/%06d.csv' $i) \
       -u 1.6 -l 0.4 \
-      > $sDir/$(printf 'pattern_data/%05d_matches.csv' $i)
+      > $sDir/$(printf 'pattern_data/%06d_matches.csv' $i)
 
   # python ../python/get-image-clusters.py \
   #     -d $sDir \

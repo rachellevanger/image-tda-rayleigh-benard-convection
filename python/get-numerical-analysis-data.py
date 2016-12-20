@@ -31,7 +31,7 @@ parser.add_option("--outwn", dest="output_local_wavenumber",
 (options, args) = parser.parse_args()
 
 # Parse input args
-radius = int(options.radius)
+radius = float(options.radius)
 
 # Load the image
 bmp = misc.imread(options.dir + "/" + options.image)

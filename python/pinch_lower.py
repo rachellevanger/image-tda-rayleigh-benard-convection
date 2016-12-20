@@ -18,7 +18,8 @@ def getMatches(sub_pers, sup_pers, death_lower, death_upper):
   matches = sub_pers.loc[ (sub_pers['dim']==0) & \
                          (sub_pers['death'] >= death_lower) & \
                          (sub_pers['death'] < death_upper) & \
-                         ((abs(sub_pers['b_x']-sub_pers['d_x'])+abs(sub_pers['b_y']-sub_pers['d_y'])) > 2) ]
+                         # ((abs(sub_pers['b_x']-sub_pers['d_x'])+abs(sub_pers['b_y']-sub_pers['d_y'])) > 2)  & \
+                         (sub_pers['death'] - sub_pers['birth'] > 10) ]
   #matches = matches.loc[ sub_pers.apply(hasMatch, axis=1) ]
 
   return matches

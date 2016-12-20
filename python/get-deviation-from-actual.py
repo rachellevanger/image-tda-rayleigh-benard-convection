@@ -61,6 +61,9 @@ data2['finalmatch'] = data2['matchedidx']
 data2['deviation'] = -1
 all_index_2 = set(range(0,len(data2)))
 
+###### MAKE NICE ERROR MESSAGE IF THE LENGTHS OF THESE FILES IS DIFFERENT ######
+print "(%d, %d)" % (len(data1), len(data2))
+
 
 # Load all the matching data into an array and update the finalmatch in the initial data.
 # That is, update to new match if found, update to -1 if not matched through.
@@ -129,9 +132,13 @@ allmatches['matched'] = allmatches['finalmatch_x']&allmatches['finalmatch_y']
 
 matched_indices = (allmatches['matched'] == True)
 
+
+
 # For any points matched in both processes (matched==True), compute the largest deviation 
 # from between the two inputs by computing pointwise distances.
 for i in range(1, steps+1):
+
+    print "Step %d. %d" % (i, len(matched_indices))
 
     # Compute distance between corresponding points on the transitive matching paths
     D = pd.DataFrame(columns=['tmp', 'deviation'])

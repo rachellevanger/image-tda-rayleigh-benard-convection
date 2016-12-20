@@ -48,6 +48,7 @@ bmp2 = np.array(im2).astype(int)
 # Compute the sup norm between the two images to use as stability criteria
 max_error = np.absolute(np.subtract(bmp1, bmp2)).max()
 
+
 print("Sup norm: " + str(max_error))
 
 print("Loading data...")
@@ -302,12 +303,12 @@ def getMatches(radius):
   print("\nRadius %d...(%d,%d)" % (radius, len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
   findStableGeneratorMatches(radius) # Find the stable generator matches
   print("Stable Generators..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
-  # findBottleneckMatches(radius) # Run bottleneck match first
-  # print("Bottleneck..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
-  findStablePinchOffMatches(radius) # Find the stable pinch-off matches
-  print("Pinch Offs..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
-  findStableRollMatches(radius) # Find the stable roll matches
-  print("Rolls..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
+  findBottleneckMatches(radius) # Run bottleneck match first
+  print("Bottleneck..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
+  # findStablePinchOffMatches(radius) # Find the stable pinch-off matches
+  # print("Pinch Offs..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
+  # findStableRollMatches(radius) # Find the stable roll matches
+  # print("Rolls..." + "(%d,%d)" % (len(sub1.loc[(sub1['matchedidx']==-1)]),  len(sup1.loc[(sup1['matchedidx']==-1)])))
 
 
 tmpSub = len(sub1.loc[(sub1['matchedidx']==-1)])
@@ -316,7 +317,7 @@ getMatches(1)
 
 factor=5
 radius=0
-iterations=2
+iterations=4
 while ( (len(sub1.loc[(sub1['matchedidx']==-1)]) < tmpSub) | (tmpSup > len(sup1.loc[(sup1['matchedidx']==-1)])) ):
   tmpSub = len(sub1.loc[(sub1['matchedidx']==-1)])
   tmpSup = len(sup1.loc[(sup1['matchedidx']==-1)])
