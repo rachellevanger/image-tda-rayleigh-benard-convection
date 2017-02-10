@@ -52,8 +52,8 @@ def assignOrientations(_keypoints, _radius, _orientationfield, nbins, max_factor
     
     for i in range(_keypoints.shape[0]):
                 
-        x = _keypoints[i,0]
-        y = _keypoints[i,1]
+        x = int(_keypoints[i,0])
+        y = int(_keypoints[i,1])
         
         if (((x - centerx)**2 + (y - centery)**2) <= crop_radius**2):
 
@@ -172,4 +172,60 @@ def getFeatureVector(orientationfield, rotation, x, y, _radius, _inner_radius_fa
     featurevector = np.concatenate((hist11_inner, hist12_inner, hist21_inner, hist22_inner, hist11_outer, hist12_outer, hist21_outer, hist22_outer), axis=0)
 
     return featurevector
+
+
+def getMatchingKeypoints(_current_keypoints, _prior_keypoints):
+    """
+    Takes in the current and a prior keypoint set outputs a matrix showing the matching.
+    The matching matrix has the same numbers of rows as _current_keypoints, and two columns.
+    Both columns are initialized to -1 (for unmatched). Positive matches are given the
+    index number from _prior_keypoints in the first column, and distance matched in second.
+    """
+
+    # Initialize to all -1
+    keypoint_matches = np.ones((_current_keypoints.shape[0], 2))*-1
+
+    # Initialize index numbers for current keypoints
+    current_idx = np.asarray(range(_current_keypoints.shape[0]))
+
+    # Separate by keypoint type 
+    for keypoint_type in range(8):
+
+        # Search for the locations of these types
+        curr_keypoint_indices = (_current_keypoints[:,keypoint_type+2] == 1)
+        prior_keypoint_indices = (_prior_keypoints[:,keypoint_type+5] == 1)
+
+        if (np.sum(curr_keypoint_indices)>0) & (np.sum(prior_keypoint_indices) > 0):
+
+            # Generate KD Trees
+            curr_kd_tree = spatial.KDTree(_current_keypoints[curr_keypoint_indices][:,[0,1,10]])
+            prior_kd_tree = spatial.KDTree(_prior_keypoints[prior_keypoint_indices][:,[3,4,13]])
+
+            # Compute closest keypoint from current->prior and from prior->current
+            matches_a = prior_kd_tree.query(_current_keypoints[curr_keypoint_indices][:,[0,1,10]])
+            matches_b = curr_kd_tree.query(_prior_keypoints[prior_keypoint_indices][:,[3,4,13]])
+
+            # Mutual matches are the positive matches within the distance cutoff. All others unmatched.
+            potential_matches = matches_b[1][matches_a[1]]
+            matched_indices = np.equal(potential_matches, np.arange(np.sum(curr_keypoint_indices)))
+
+            # Filter out matches that are more than 5 pixels away.
+            in_bounds = (matches_a[0] <= 5)
+            matched_indices = np.multiply(matched_indices, in_bounds)
+
+            # Add the matching data to the keypoint_matches matrix
+            curr_type_indices = current_idx[curr_keypoint_indices]
+            prior_type_indices = _prior_keypoints[prior_keypoint_indices, 0]
+
+            keypoint_matches[curr_type_indices[matched_indices],0] = prior_type_indices[matches_a[1]][matched_indices]
+            keypoint_matches[curr_type_indices[matched_indices],1] = matches_a[0][matched_indices]
+
+    return keypoint_matches
+
+
+
+
+
+
+
     
