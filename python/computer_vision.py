@@ -178,7 +178,7 @@ def getFeatureVector(_bmp, _blur_radius, rotation, x, y, _radius, _inner_radius_
     return featurevector
 
 
-def getMatchingKeypoints(_current_keypoints, _prior_keypoints):
+def getMatchingKeypoints(_current_keypoints, _prior_keypoints, _has_feature_vector):
     """
     Takes in the current and a prior keypoint set outputs a matrix showing the matching.
     The matching matrix has the same numbers of rows as _current_keypoints, and two columns.
@@ -202,12 +202,21 @@ def getMatchingKeypoints(_current_keypoints, _prior_keypoints):
         if (np.sum(curr_keypoint_indices)>0) & (np.sum(prior_keypoint_indices) > 0):
 
             # Generate KD Trees
-            curr_kd_tree = spatial.KDTree(_current_keypoints[curr_keypoint_indices][:,[0,1,10]])
-            prior_kd_tree = spatial.KDTree(_prior_keypoints[prior_keypoint_indices][:,[3,4,13]])
+            if _has_feature_vector:
+                curr_kd_tree = spatial.KDTree(_current_keypoints[curr_keypoint_indices][:,[0,1,10]])
+                prior_kd_tree = spatial.KDTree(_prior_keypoints[prior_keypoint_indices][:,[3,4,13]])
 
-            # Compute closest keypoint from current->prior and from prior->current
-            matches_a = prior_kd_tree.query(_current_keypoints[curr_keypoint_indices][:,[0,1,10]])
-            matches_b = curr_kd_tree.query(_prior_keypoints[prior_keypoint_indices][:,[3,4,13]])
+                # Compute closest keypoint from current->prior and from prior->current
+                matches_a = prior_kd_tree.query(_current_keypoints[curr_keypoint_indices][:,[0,1,10]])
+                matches_b = curr_kd_tree.query(_prior_keypoints[prior_keypoint_indices][:,[3,4,13]])
+            else:
+                curr_kd_tree = spatial.KDTree(_current_keypoints[curr_keypoint_indices][:,[0,1]])
+                prior_kd_tree = spatial.KDTree(_prior_keypoints[prior_keypoint_indices][:,[3,4]])
+
+                # Compute closest keypoint from current->prior and from prior->current
+                matches_a = prior_kd_tree.query(_current_keypoints[curr_keypoint_indices][:,[0,1]])
+                matches_b = curr_kd_tree.query(_prior_keypoints[prior_keypoint_indices][:,[3,4]])
+
 
             # Mutual matches are the positive matches within the distance cutoff. All others unmatched.
             potential_matches = matches_b[1][matches_a[1]]

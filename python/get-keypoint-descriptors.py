@@ -17,7 +17,7 @@ import data_access as da
 
 
 
-parser = OptionParser('usage: -d dir -i image.bmp -r orientation_blur_radius --psub pd_sub.csv --psup pd_sup.csv -m match_to_features.txt --out output_features.txt '  )
+parser = OptionParser('usage: -d dir -i image.bmp -r orientation_blur_radius --psub pd_sub.csv --psup pd_sup.csv -m match_to_features.txt -v generate_feature_vectors --out output_features.txt '  )
 
 parser.add_option("-d", dest="dir",
                   help="parent directory")
@@ -34,6 +34,8 @@ parser.add_option("--psup", dest="pd_sup",
                   help="superlevel persistence")
 parser.add_option("-m", dest="match_to_features",
                   help="optional file to match")
+parser.add_option("-v", dest="generate_feature_vectors",
+                  help="generate vectors = 1, else =0")
 parser.add_option("--out", dest="output_features",
                   help="output file for features")
 
@@ -74,45 +76,52 @@ td = td.astype(np.int)
 keypoints = da.loadKeypoints(options.dir + "/" + options.pd_sub, options.dir + "/" + options.pd_sup, td)
 
 
-# Some computed values
-centerx = bmp.shape[0]/2
-centery = bmp.shape[1]/2
-crop_radius = centerx - 30
+# Check to see if need to make feature vectors
+if int(options.generate_feature_vectors):
 
 
-print "Generate additional keypoints..."
-# Generate the feature vectors
+  # Some computed values
+  centerx = bmp.shape[0]/2
+  centery = bmp.shape[1]/2
+  crop_radius = centerx - 30
 
-allFeatures = []
-orientation_col = keypoints.shape[1]
+  print "Generate additional keypoints..."
+  # Generate the feature vectors
 
-# Generate additional keypoints based on orientation fields.
-allkeypoints = cv.assignOrientations(keypoints, keypoint_radius, of, keypoint_orientation_bins, keypoint_peak_factor, bmp, crop_radius)            
+  allFeatures = []
+  orientation_col = keypoints.shape[1]
 
-print "Generate feature vectors..."
-# Loop through all topological and p.h. defects and generate feature vectors
-for i in range(allkeypoints.shape[0]):
+  # Generate additional keypoints based on orientation fields.
+  allkeypoints = cv.assignOrientations(keypoints, keypoint_radius, of, keypoint_orientation_bins, keypoint_peak_factor, bmp, crop_radius)            
 
-    x = int(allkeypoints[i,0])
-    y = int(allkeypoints[i,1])
+  print "Generate feature vectors..."
+  # Loop through all topological and p.h. defects and generate feature vectors
+  for i in range(allkeypoints.shape[0]):
 
-    orientation = allkeypoints[i,orientation_col]
-    rotation = -orientation*(180./keypoint_orientation_bins)
+      x = int(allkeypoints[i,0])
+      y = int(allkeypoints[i,1])
 
-    # Only process points within tolerance of boundary
-    if (((x - centerx)**2 + (y - centery)**2) <= crop_radius**2):
-        features = np.concatenate((allkeypoints[i], [bmp[y, x]], cv.getFeatureVector(bmp, orientation_blur_radius, rotation, x, y, feature_radius, feature_inner_radius_factor, feature_orientation_bins, feature_sigma_divisor)),axis=0)
-        if len(allFeatures) == 0:
-            allFeatures = features
-        else:
-            allFeatures = np.vstack([allFeatures, features])
+      orientation = allkeypoints[i,orientation_col]
+      rotation = -orientation*(180./keypoint_orientation_bins)
+
+      # Only process points within tolerance of boundary
+      if (((x - centerx)**2 + (y - centery)**2) <= crop_radius**2):
+          features = np.concatenate((allkeypoints[i], [bmp[y, x]], cv.getFeatureVector(bmp, orientation_blur_radius, rotation, x, y, feature_radius, feature_inner_radius_factor, feature_orientation_bins, feature_sigma_divisor)),axis=0)
+          if len(allFeatures) == 0:
+              allFeatures = features
+          else:
+              allFeatures = np.vstack([allFeatures, features])
+
+else:
+
+  allFeatures = keypoints
 
 
-print "Match feature vectors..."
 # Match to existing features
 if options.match_to_features:
+  print "Match feature vectors..."
   prior_keypoints = np.loadtxt(options.dir + "/" + options.match_to_features, delimiter=' ')
-  keypoint_matches = cv.getMatchingKeypoints(allFeatures, prior_keypoints)
+  keypoint_matches = cv.getMatchingKeypoints(allFeatures, prior_keypoints, int(options.generate_feature_vectors))
 else:
   keypoint_matches = np.ones((allFeatures.shape[0], 2))*-1
 
@@ -125,7 +134,7 @@ if len(allFeatures.shape)==1:
         f.write('0 ' + keypoint_matches[0] + ' ' + sOut)
 else:
     allFeatures = np.hstack((np.reshape(np.asarray(range(allFeatures.shape[0])), (allFeatures.shape[0], 1)), keypoint_matches, allFeatures))
-    np.savetxt(options.dir + '/' + options.output_features,allFeatures,fmt='%d',delimiter=' ')
+    np.savetxt(options.dir + '/' + options.output_features, allFeatures,fmt='%d',delimiter=' ')
 
 
 
