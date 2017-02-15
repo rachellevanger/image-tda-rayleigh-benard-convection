@@ -101,7 +101,7 @@ for i in range(allkeypoints.shape[0]):
 
     # Only process points within tolerance of boundary
     if (((x - centerx)**2 + (y - centery)**2) <= crop_radius**2):
-        features = np.concatenate((allkeypoints[i], [bmp[y, x]], cv.getFeatureVector(of, rotation, x, y, feature_radius, feature_inner_radius_factor, feature_orientation_bins, feature_sigma_divisor, bmp)),axis=0)
+        features = np.concatenate((allkeypoints[i], [bmp[y, x]], cv.getFeatureVector(bmp, orientation_blur_radius, rotation, x, y, feature_radius, feature_inner_radius_factor, feature_orientation_bins, feature_sigma_divisor)),axis=0)
         if len(allFeatures) == 0:
             allFeatures = features
         else:

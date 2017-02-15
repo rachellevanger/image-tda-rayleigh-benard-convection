@@ -14,7 +14,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import seaborn.apionly as sns 
 from scipy import spatial
 import numpy as np
-
+from scipy.ndimage import interpolation
+import numerical_analysis as na
 
 
 def convertMainOrientationBin(_bin, _nbins):
@@ -99,7 +100,7 @@ def assignOrientations(_keypoints, _radius, _orientationfield, nbins, max_factor
     return allKeypoints
 
 
-def getFeatureVector(orientationfield, rotation, x, y, _radius, _inner_radius_factor, _nbins, _sigma_divisor, _bmp):
+def getFeatureVector(_bmp, _blur_radius, rotation, x, y, _radius, _inner_radius_factor, _nbins, _sigma_divisor):
     """
     Takes in a single local patch from the orientation field and generates keypoint descriptor from it.
     Circular patch of given radius centered at (x,y) is cropped from orientation field and divided
@@ -124,24 +125,30 @@ def getFeatureVector(orientationfield, rotation, x, y, _radius, _inner_radius_fa
     weights = weights/np.amax(weights)
     inner_weights = weights[(outer_radius - inner_radius):(outer_radius+inner_radius), (outer_radius - inner_radius):(outer_radius+inner_radius)]
     
+        
+    # GET ORIENTATION FIELD OF ROTATED IMAGE
+    cropped_bmp = _bmp[(y-outer_radius):(y+outer_radius), (x-outer_radius):(x+outer_radius)]
+    rotated_image = interpolation.rotate(cropped_bmp, float(rotation), reshape=False)
+
+    u = rotated_image.astype(float)
+    du = np.gradient(u)
+    raw_of = na.orientation_field(du, _blur_radius)
+    rotated_orientation = 255*(raw_of + math.pi/2.0)/math.pi # On scale of 0-255 for printing image. Legacy.
+
     # INNER CIRCLE
     # Get circular crop
     crop = np.zeros((inner_radius*2, inner_radius*2))
     crop[inner_radius, inner_radius] = 1
     crop = morphology.binary_dilation(crop, morphology.disk(inner_radius))
-        
-    # Crop orientation field
-    cropped_orientation = orientationfield[(y-inner_radius):(y+inner_radius), (x-inner_radius):(x+inner_radius)]
-    
-    # Rotate cropped orientation field: scale to 180 degrees, subtract rotation, then scale to 255
-    rotated_orientation = ((cropped_orientation.astype(np.float)*(180./255.) + float(rotation))*(255./180.)).astype(np.int)%256
 
+    cropped_orientation = rotated_orientation[(outer_radius-inner_radius):(outer_radius+inner_radius), (outer_radius-inner_radius):(outer_radius+inner_radius)]
+    
     # Get histogram for each of the four inner subregions
     tmp_radius = inner_radius
-    hist11_inner = np.histogram(rotated_orientation[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]], bins=_nbins, range=(0,256), weights=inner_weights[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]])[0]
-    hist12_inner = np.histogram(rotated_orientation[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=inner_weights[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]])[0]
-    hist21_inner = np.histogram(rotated_orientation[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]], bins=_nbins, range=(0,256), weights=inner_weights[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]])[0]
-    hist22_inner = np.histogram(rotated_orientation[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=inner_weights[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]])[0]
+    hist11_inner = np.histogram(cropped_orientation[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]], bins=_nbins, range=(0,256), weights=inner_weights[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]])[0]
+    hist12_inner = np.histogram(cropped_orientation[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=inner_weights[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]])[0]
+    hist21_inner = np.histogram(cropped_orientation[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]], bins=_nbins, range=(0,256), weights=inner_weights[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]])[0]
+    hist22_inner = np.histogram(cropped_orientation[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=inner_weights[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]])[0]
     
     # OUTER CIRCLE
     # Get circular crop
@@ -154,18 +161,15 @@ def getFeatureVector(orientationfield, rotation, x, y, _radius, _inner_radius_fa
     crop = crop ^ remove
     
     # Crop orientation field
-    cropped_orientation = orientationfield[(y-outer_radius):(y+outer_radius), (x-outer_radius):(x+outer_radius)]
+    cropped_orientation = rotated_orientation
     
-    # Rotate cropped orientation field
-    rotated_orientation = ((cropped_orientation.astype(np.float)*(180./255.) + float(rotation))*(255./180.)).astype(np.int)%256
 
-    
     # Get histogram for each of the four outer subregions
     tmp_radius = outer_radius
-    hist11_outer = np.histogram(rotated_orientation[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]], bins=_nbins, range=(0,256), weights=weights[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]])[0]
-    hist12_outer = np.histogram(rotated_orientation[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=weights[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]])[0]
-    hist21_outer = np.histogram(rotated_orientation[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]], bins=_nbins, range=(0,256), weights=weights[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]])[0]
-    hist22_outer = np.histogram(rotated_orientation[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=weights[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]])[0]
+    hist11_outer = np.histogram(cropped_orientation[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]], bins=_nbins, range=(0,256), weights=weights[0:tmp_radius, 0:tmp_radius][crop[0:tmp_radius, 0:tmp_radius]])[0]
+    hist12_outer = np.histogram(cropped_orientation[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=weights[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)][crop[0:tmp_radius, (tmp_radius+1):(2*tmp_radius)]])[0]
+    hist21_outer = np.histogram(cropped_orientation[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]], bins=_nbins, range=(0,256), weights=weights[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius][crop[(tmp_radius+1):(2*tmp_radius), 0:tmp_radius]])[0]
+    hist22_outer = np.histogram(cropped_orientation[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]], bins=_nbins, range=(0,256), weights=weights[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)][crop[(tmp_radius+1):(2*tmp_radius), (tmp_radius+1):(2*tmp_radius)]])[0]
     
     
     # Return feature vector
