@@ -44,8 +44,9 @@ def assignOrientations(_keypoints, _radius, _orientationfield, nbins, max_factor
     crop_radius = _crop_radius
     
     allKeypoints = _keypoints
+
     allKeypoints = np.hstack([allKeypoints, np.zeros((_keypoints.shape[0],2), np.int)])
-        
+
     # Get circular crop
     crop = np.zeros((_radius*2, _radius*2))
     crop[_radius, _radius] = 1

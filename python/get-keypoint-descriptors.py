@@ -116,6 +116,8 @@ else:
 
   allFeatures = keypoints
 
+print allFeatures.shape
+
 
 # Match to existing features
 if options.match_to_features:
