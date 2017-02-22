@@ -116,7 +116,6 @@ else:
 
   allFeatures = keypoints
 
-print allFeatures.shape
 
 
 # Match to existing features
