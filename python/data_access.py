@@ -3,7 +3,12 @@
 
 import numpy as np
 import pandas as pd
+from scipy import misc
 
+
+def loadTemperatureField(_bmp_file):
+  return misc.imread(_bmp_file)
+  
 
 def loadKeypoints(_pd_sub_file, _pd_sup_file, _td):
   """

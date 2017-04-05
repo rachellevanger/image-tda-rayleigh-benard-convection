@@ -61,7 +61,7 @@ feature_sigma_divisor = 1.
 print "Loading..."
 
 # Load the temperature field
-bmp = misc.imread(options.dir + "/" + options.image)
+bmp = da.loadTemperatureField(options.dir + "/" + options.image)
 
 # Compute the topological defects
 u = bmp.astype(float)
