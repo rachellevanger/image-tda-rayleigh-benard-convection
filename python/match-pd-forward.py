@@ -156,7 +156,7 @@ def findStableGeneratorMatches(radius):
         sup2.loc[match,'matchedidx'] = 1
 
 # PINCH-OFF GENERATOR MATCHES
-# Match the pinch-off to within +-2 pixels
+# Match the pinch-off to within +-radius pixels
 def stablePinchOffMatches(pt, data, type, radius):
 
   if type == 'sub':
@@ -248,7 +248,7 @@ def findStablePinchOffMatches(radius):
 
 
 # STABLE ROLL MATCHES
-# Match birth generators of death abve the pinch-off level to within +-2 pixels
+# Match birth generators of death abve the pinch-off level to within +-radius pixels
 def stableRollMatches(pt, data, type, radius):
   if type == 'sub':
     result = data.loc[ 
